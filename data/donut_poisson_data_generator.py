@@ -79,6 +79,14 @@ def generate_poisson_donut(
         basis_laps[idx] = laplacian_basis(r, theta, k, m, r_in, r_out, is_cos)
 
     all_inputs, all_outputs = [], []
+    sdf_irreg = np.minimum(r - r_in, r_out - r)
+    
+    # Pre-calculate SDF for latent grid
+    r_grid = np.sqrt(GX**2 + GY**2)
+    sdf_grid = np.minimum(r_grid - r_in, r_out - r_grid)
+    # Mask out points outside the donut for visualization (optional, but keep SDF values for model)
+    # We'll save the full grid SDF so FNO knows where the boundaries are.
+
     print(f"Generating {n_train + n_test} samples...")
     for i in tqdm(range(n_train + n_test), desc="Generating samples"):
         coeffs = rng.standard_normal(n_terms)
@@ -90,7 +98,9 @@ def generate_poisson_donut(
         u_scale = np.max(np.abs(u)) + 1e-12
         u, f = u / u_scale, f / u_scale
 
-        all_inputs.append(torch.from_numpy(f).float().unsqueeze(-1))
+        # Stack features: [f, x, y, sdf]
+        input_feat = np.stack([f, x_irreg, y_irreg, sdf_irreg], axis=-1)
+        all_inputs.append(torch.from_numpy(input_feat).float())
         all_outputs.append(torch.from_numpy(u).float().unsqueeze(-1))
 
         split_dir = train_dir if i < n_train else test_dir
@@ -103,7 +113,8 @@ def generate_poisson_donut(
         'coords': coords,
         'inputs': torch.stack(all_inputs),
         'outputs': torch.stack(all_outputs),
-        'latent_grid': latent_grid
+        'latent_grid': latent_grid,
+        'latent_sdf': torch.from_numpy(sdf_grid).float().unsqueeze(-1) # (Res, Res, 1)
     }, pt_path)
     print(f"Saved dataset to {pt_path}")
 

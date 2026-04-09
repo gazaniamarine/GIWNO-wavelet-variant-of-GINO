@@ -8,13 +8,13 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
-from neuralop.models.gino import GINO
+from neuralop.models.giwno import GIWNO
 from neuralop.utils.losses import LpLoss
 import matplotlib.pyplot as plt
 import time
 
-# Import config
-from config.poisson_gino_donut_config import config
+# Import config (specific to GIWNO)
+from config.poisson_giwno_donut_config import config
 
 # 1. Dataset for Poisson Donut
 class PoissonDonutDataset(Dataset):
@@ -39,7 +39,7 @@ class PoissonDonutDataset(Dataset):
 # 2. Training Setup
 def train():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"Training on {device}")
+    print(f"Training GIWNO on {device}")
 
     # Load Data from Config
     data_cfg = config['data']
@@ -51,16 +51,18 @@ def train():
     train_loader = DataLoader(train_dataset, batch_size=data_cfg['batch_size'], shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=data_cfg['batch_size'], shuffle=False)
 
-    # Initialize GINO Model from Config
+    # Initialize GIWNO Model from Config
     model_cfg = config['model']
-    model = GINO(
+    model = GIWNO(
         in_channels=model_cfg['in_channels'],
         out_channels=model_cfg['out_channels'],
         gno_coord_dim=model_cfg['gno_coord_dim'],
-        fno_n_modes=model_cfg['fno']['n_modes'],
-        fno_hidden_channels=model_cfg['fno']['hidden_channels'],
-        fno_n_layers=model_cfg['fno']['n_layers'],
-        fno_in_channels=model_cfg['fno']['in_channels'],
+        wno_n_modes=model_cfg['wno']['n_modes'],
+        wno_hidden_channels=model_cfg['wno']['hidden_channels'],
+        wno_n_layers=model_cfg['wno']['n_layers'],
+        wno_in_channels=model_cfg['wno']['in_channels'],
+        wno_level=model_cfg['wno'].get('level', 2),
+        wno_wavelet=model_cfg['wno'].get('wavelet', 'haar'),
         latent_feature_channels=1 if full_dataset.latent_sdf is not None else None,
         in_gno_radius=model_cfg['gno']['in_radius'],
         out_gno_radius=model_cfg['gno']['out_radius'],
@@ -74,7 +76,7 @@ def train():
                            weight_decay=train_cfg['weight_decay'])
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=train_cfg['scheduler_t_max'])
     
-    # Loss Function (Relative L2 per request)
+    # Loss Function
     if train_cfg['loss_type'] == 'rel_l2':
         criterion = LpLoss(d=2, p=2, reduction=True)
     else:
@@ -100,7 +102,7 @@ def train():
             x, y = x.to(device), y.to(device)
             optimizer.zero_grad()
             
-            # GINO forward
+            # GIWNO forward
             out = model(
                 input_geom=coords,
                 latent_queries=latent_grid,
@@ -109,7 +111,6 @@ def train():
                 latent_features=latent_sdf
             )
             
-            # Using Rel L2 Loss
             loss = criterion(out, y)
             loss.backward()
             optimizer.step()
@@ -144,7 +145,7 @@ def train():
     plt.yscale('log')
     plt.xlabel('Epoch')
     plt.ylabel('Relative L2 Error')
-    plt.title("GINO-FNO Training (Poisson Donut)")
+    plt.title("GIWNO Training (Poisson Donut)")
     plt.legend()
     plt.savefig(os.path.join(save_dir, 'training_loss.png'))
     print(f"Training Complete. Model saved to {model_path}")
@@ -156,44 +157,28 @@ def train():
         x, y = x[:1].to(device), y[:1].to(device)
         pred = model(coords, latent_grid, coords, x, latent_features=latent_sdf)
         
-        # Pointwise absolute error to see where model fails
         error = torch.abs(y[0, :, 0] - pred[0, :, 0]).cpu()
-        y_cpu = y[0, :, 0].cpu()
-        pred_cpu = pred[0, :, 0].cpu()
         coords_cpu = coords[0].cpu()
 
         plt.figure(figsize=(20, 5))
-        
-        # Subplot 1: True u
         plt.subplot(1, 3, 1)
-        im1 = plt.scatter(coords_cpu[:, 0], coords_cpu[:, 1], c=y_cpu, s=2, cmap='viridis')
+        im1 = plt.scatter(coords_cpu[:, 0], coords_cpu[:, 1], c=y[0, :, 0].cpu(), s=2, cmap='viridis')
         plt.title("True Solution u(x)")
         plt.colorbar(im1)
-        plt.axis('equal')
-        
-        # Subplot 2: Predicted u
         plt.subplot(1, 3, 2)
-        im2 = plt.scatter(coords_cpu[:, 0], coords_cpu[:, 1], c=pred_cpu, s=2, cmap='viridis')
-        plt.title("Predicted Solution u(x)")
+        im2 = plt.scatter(coords_cpu[:, 0], coords_cpu[:, 1], c=pred[0, :, 0].cpu(), s=2, cmap='viridis')
+        plt.title("Predicted (GIWNO)")
         plt.colorbar(im2)
-        plt.axis('equal')
-        
-        # Subplot 3: Error
         plt.subplot(1, 3, 3)
         im3 = plt.scatter(coords_cpu[:, 0], coords_cpu[:, 1], c=error, s=2, cmap='magma')
         plt.title("Pointwise Absolute Error")
         plt.colorbar(im3)
-        plt.axis('equal')
-        
         plt.tight_layout()
         plt.savefig(os.path.join(save_dir, 'prediction_sample.png'))
-        print(f"Visualization saved to {os.path.join(save_dir, 'prediction_sample.png')}")
-
-    # Print final error
-    final_test_loss = history['test_loss'][-1]
+    
     print(f"\n" + "="*50)
     print(f"FINAL TRAINING SUMMARY")
-    print(f"Final Relative L2 Test Error: {final_test_loss:.6f}")
+    print(f"Final Relative L2 Test Error: {history['test_loss'][-1]:.6f}")
     print("="*50)
 
 if __name__ == "__main__":

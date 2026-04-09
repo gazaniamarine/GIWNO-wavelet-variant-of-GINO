@@ -10,16 +10,6 @@ outputs/
 *.png
 *.pt
 
-# GIWNO / Wavelet Work (Wait for Phase 2)
-neuralop/models/giwno.py
-neuralop/layers/wno_block.py
-neuralop/layers/wavelet_convolution.py
-config/poisson_donut_config.py
-scripts/train_model.py
-scripts/train_gino.py
-data/generate_donut.py
-
-
 # IDEs
 .vscode/
 .idea/
