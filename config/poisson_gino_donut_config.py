@@ -26,7 +26,7 @@ config = {
         }
     },
     "train": {
-        "epochs": 50,
+        "epochs": 500,
         "learning_rate": 1e-3,
         "weight_decay": 1e-5,
         "scheduler_t_max": 100,

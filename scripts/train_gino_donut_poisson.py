@@ -1,3 +1,9 @@
+import os
+import sys
+# Ensure the root directory is prioritized in sys.path
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, root_dir)
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -6,11 +12,8 @@ from neuralop.models.gino import GINO
 from neuralop.utils.losses import LpLoss
 import matplotlib.pyplot as plt
 import time
-import os
-import sys
 
 # Import config
-sys.path.append('/home/gazania/zania_folder/GIWNO-wavelet-variant-of-GINO')
 from config.poisson_gino_donut_config import config
 
 # 1. Dataset for Poisson Donut
@@ -149,17 +152,45 @@ def train():
         x, y = x[:1].to(device), y[:1].to(device)
         pred = model(coords, latent_grid, coords, x)
         
-        plt.figure(figsize=(15, 5))
+        # Pointwise absolute error to see where model fails
+        error = torch.abs(y[0, :, 0] - pred[0, :, 0]).cpu()
+        y_cpu = y[0, :, 0].cpu()
+        pred_cpu = pred[0, :, 0].cpu()
+        coords_cpu = coords[0].cpu()
+
+        plt.figure(figsize=(20, 5))
+        
+        # Subplot 1: True u
         plt.subplot(1, 3, 1)
-        plt.scatter(coords[0, :, 0].cpu(), coords[0, :, 1].cpu(), c=x[0, :, 0].cpu(), s=1)
-        plt.title("Input f(x)")
+        im1 = plt.scatter(coords_cpu[:, 0], coords_cpu[:, 1], c=y_cpu, s=2, cmap='viridis')
+        plt.title("True Solution u(x)")
+        plt.colorbar(im1)
+        plt.axis('equal')
+        
+        # Subplot 2: Predicted u
         plt.subplot(1, 3, 2)
-        plt.scatter(coords[0, :, 0].cpu(), coords[0, :, 1].cpu(), c=y[0, :, 0].cpu(), s=1)
-        plt.title("Expected u(x)")
+        im2 = plt.scatter(coords_cpu[:, 0], coords_cpu[:, 1], c=pred_cpu, s=2, cmap='viridis')
+        plt.title("Predicted Solution u(x)")
+        plt.colorbar(im2)
+        plt.axis('equal')
+        
+        # Subplot 3: Error
         plt.subplot(1, 3, 3)
-        plt.scatter(coords[0, :, 0].cpu(), coords[0, :, 1].cpu(), c=pred[0, :, 0].cpu(), s=1)
-        plt.title("Predicted (FNO Baseline)")
+        im3 = plt.scatter(coords_cpu[:, 0], coords_cpu[:, 1], c=error, s=2, cmap='magma')
+        plt.title("Pointwise Absolute Error")
+        plt.colorbar(im3)
+        plt.axis('equal')
+        
+        plt.tight_layout()
         plt.savefig(os.path.join(save_dir, 'prediction_sample.png'))
+        print(f"Visualization saved to {os.path.join(save_dir, 'prediction_sample.png')}")
+
+    # Print final error
+    final_test_loss = history['test_loss'][-1]
+    print(f"\n" + "="*50)
+    print(f"FINAL TRAINING SUMMARY")
+    print(f"Final Relative L2 Test Error: {final_test_loss:.6f}")
+    print("="*50)
 
 if __name__ == "__main__":
     train()

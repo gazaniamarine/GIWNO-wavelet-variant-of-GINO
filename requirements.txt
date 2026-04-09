@@ -1,0 +1,14 @@
+tensorly
+tensorly-torch
+torch-harmonics
+matplotlib
+opt-einsum
+h5py
+zarr
+wandb
+ruamel.yaml
+configmypy
+zencfg
+tqdm
+scipy
+numpy

@@ -54,10 +54,12 @@ def segment_csr(
 
     else:
         if use_scatter:
-            print(
-                "Warning: use_scatter is True but torch_scatter is not properly built. \
-                  Defaulting to naive PyTorch implementation"
-            )
+            # Suppress verbose warnings as the fallback works correctly
+            # print(
+            #     "Warning: use_scatter is True but torch_scatter is not properly built. \
+            #       Defaulting to naive PyTorch implementation"
+            # )
+            pass
         # if batched, shape [b, n_reps, channels]
         # otherwise shape [n_reps, channels]
         if src.ndim == 3:
