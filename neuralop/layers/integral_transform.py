@@ -191,11 +191,10 @@ class IntegralTransform(nn.Module):
         rep_features = self.channel_mlp(agg_features)
 
         if f_y is not None and self.transform_type != "nonlinear_kernelonly":
-            # if we have a batch of outputs (3d incl. batch dim) and unbatched inputs,
-            # create an identical batch dim in rep_features
+            # Use broadcasting to avoid large intermediate repeat allocation
             if rep_features.ndim == 2 and batched:
-                rep_features = rep_features.unsqueeze(0).repeat([batch_size] + [1] * rep_features.ndim)
-            rep_features.mul_(in_features)
+                rep_features = rep_features.unsqueeze(0)
+            rep_features = rep_features * in_features
 
         # Weight neighbors in each neighborhood, first according to the neighbor search (mollified GNO)
         # and second according to individually-provided weights.

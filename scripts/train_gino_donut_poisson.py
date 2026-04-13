@@ -38,7 +38,10 @@ class PoissonDonutDataset(Dataset):
 
 # 2. Training Setup
 def train():
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    if torch.cuda.device_count() > 1:
+        device = torch.device('cuda:1')
+    else:
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print(f"Training on {device}")
 
     # Load Data from Config
@@ -146,7 +149,7 @@ def train():
     plt.ylabel('Relative L2 Error')
     plt.title("GINO-FNO Training (Poisson Donut)")
     plt.legend()
-    plt.savefig(os.path.join(save_dir, 'training_loss.png'))
+    plt.savefig(os.path.join(save_dir, 'gino_training_loss.png'))
     print(f"Training Complete. Model saved to {model_path}")
 
     # Visualize results
@@ -186,7 +189,7 @@ def train():
         plt.axis('equal')
         
         plt.tight_layout()
-        plt.savefig(os.path.join(save_dir, 'prediction_sample.png'))
+        plt.savefig(os.path.join(save_dir, 'gino_prediction_sample.png'))
         print(f"Visualization saved to {os.path.join(save_dir, 'prediction_sample.png')}")
 
     # Print final error

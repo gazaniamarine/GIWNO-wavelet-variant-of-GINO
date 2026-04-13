@@ -190,6 +190,8 @@ class GIWNO(BaseModel):
         in_p = in_p.view((batch_size, *grid_shape, -1))
 
         if latent_features is not None:
+            if latent_features.shape[0] == 1 and batch_size > 1:
+                latent_features = latent_features.expand(batch_size, *latent_features.shape[1:])
             in_p = torch.cat((in_p, latent_features), dim=-1)
             
         latent_embed = self.latent_embedding(in_p=in_p)

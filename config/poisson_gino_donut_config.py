@@ -5,7 +5,7 @@ config = {
     "data": {
         "path": "/home/gazania/zania_folder/GIWNO-wavelet-variant-of-GINO/data/poisson_donut.pt",
         "n_samples": 1000,
-        "batch_size": 8,
+        "batch_size": 2,
         "train_test_split": 0.8
     },
     "model": {

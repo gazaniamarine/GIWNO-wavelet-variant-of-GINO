@@ -5,7 +5,7 @@ config = {
     "data": {
         "path": "/home/gazania/zania_folder/GIWNO-wavelet-variant-of-GINO/data/poisson_donut.pt",
         "n_samples": 1000,
-        "batch_size": 8,
+        "batch_size": 16,
         "train_test_split": 0.8
     },
     "model": {
@@ -15,15 +15,15 @@ config = {
         "gno_coord_dim": 2,
         "wno": {
             "n_modes": (16, 16),
-            "hidden_channels": 64,
+            "hidden_channels": 128,
             "n_layers": 4,
             "in_channels": 4,
             "level": 2,
             "wavelet": 'haar'
         },
         "gno": {
-            "in_radius": 0.1,
-            "out_radius": 0.1,
+            "in_radius": 0.05,
+            "out_radius": 0.05,
             "use_open3d": False
         }
     },
